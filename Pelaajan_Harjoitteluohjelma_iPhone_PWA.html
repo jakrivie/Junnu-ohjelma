@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10234b">
+<title>Pelaajan Harjoitteluohjelma</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:linear-gradient(135deg,#0b1730,#1464ff);color:#fff;padding:26px 18px 22px;border-radius:0 0 26px 26px}
+h1{font-size:24px;margin:0 0 4px}.sub{opacity:.82}.wrap{max-width:760px;margin:auto;padding:12px 12px 95px}
+.card{background:#fff;border:1px solid #dfe5ee;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 4px 16px #17233a0a}
+h2{font-size:19px;margin:0 0 12px}.muted{color:#68758a;font-size:14px;line-height:1.45}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{background:#eaf1ff;color:#1554c7;border-radius:999px;padding:5px 9px;font-weight:800;font-size:12px}
+button{border:0;border-radius:12px;padding:12px 14px;background:#1464ff;color:white;font-weight:800;font-size:15px;margin-top:9px}
+button.secondary{background:#edf1f6;color:#172033}button.good{background:#16a36a}button.danger{background:#fff0f0;color:#c32f2f}
+input,select,textarea{width:100%;border:1px solid #ccd5e2;border-radius:11px;padding:11px;font-size:16px;margin:6px 0 10px;background:white}textarea{min-height:75px}
+label{font-size:13px;font-weight:800;color:#68758a}.item{padding:12px 0;border-bottom:1px solid #e5e9f0}.item:last-child{border-bottom:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f5f8fc;border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:24px}
+.nav{position:fixed;bottom:8px;left:8px;right:8px;max-width:740px;margin:auto;background:#fff;border:1px solid #dfe5ee;border-radius:18px;display:flex;justify-content:space-around;padding:6px;z-index:5;box-shadow:0 5px 20px #0001}.nav button{background:transparent;color:#59677b;margin:0;padding:7px 8px;font-size:11px}.nav button.on{background:#eaf1ff;color:#1554c7}.nav i{display:block;font-size:20px;font-style:normal}
+.lock{background:#fff6d9;border:1px solid #f1d36d;border-radius:12px;padding:11px;font-size:13px;margin-bottom:10px}
+.reward{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fffaf0;border:1px solid #f1dfaa;border-radius:14px;margin:8px 0}.star{font-size:27px}.hidden{display:none}
+@media(min-width:600px){.wrap{padding-left:18px;padding-right:18px}}
+</style>
+</head>
+<body>
+<header><h1>🏒 Pelaajan Harjoitteluohjelma</h1><div class="sub">Harjoittele • Kehity • Pelaa</div></header>
+<div class="wrap" id="app"></div>
+<div class="nav">
+<button id="n-home" onclick="go('home')"><i>🏠</i>Koti</button>
+<button id="n-plan" onclick="go('plan')"><i>🏒</i>Ohjelma</button>
+<button id="n-progress" onclick="go('progress')"><i>📈</i>Kehitys</button>
+<button id="n-reward" onclick="go('reward')"><i>🏆</i>Palkinnot</button>
+<button id="n-admin" onclick="go('admin')"><i>⚙️</i>Ylläpito</button>
+</div>
+<script>
+const KEY='ph_v3';
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ player:{name:'Pelaaja',age:10,type:'Pelaaja',level:2,locked:false},
+ areas:[
+  {name:'Luistelu',weight:20},{name:'Kiekonkäsittely',weight:20},{name:'Laukaus',weight:15},
+  {name:'Koordinaatio',weight:15},{name:'Silmä–käsi',weight:10},{name:'Reaktio',weight:10},{name:'Kehonhallinta',weight:10}
+ ],
+ goalieAreas:[
+  {name:'Luistelu ja liikkuminen',weight:20},{name:'Torjuntatekniikka',weight:20},{name:'Mailapelaaminen',weight:15},
+  {name:'Reaktiot',weight:15},{name:'Liikkuvuus',weight:10},{name:'Kiekon seuraaminen',weight:10},{name:'Kehonhallinta',weight:10}
+ ],
+ exercises:[
+  {name:'Nopeat suunnanmuutokset',area:'Luistelu',desc:'Kiihdytys, jarrutus ja suunnanvaihto.',min:6,level:1},
+  {name:'Pujottelu',area:'Kiekonkäsittely',desc:'Pujottele kuuden kohteen välistä.',min:8,level:1},
+  {name:'Tarkkuuslaukaus',area:'Laukaus',desc:'Lauo viiteen kohteeseen ja laske osumat.',min:10,level:1},
+  {name:'Pallon pomputus',area:'Koordinaatio',desc:'Vuorokäsin 3 × 45 sekuntia.',min:5,level:1},
+  {name:'Seinäsyötöt',area:'Silmä–käsi',desc:'Heitä pallo seinään ja ota kiinni.',min:5,level:1},
+  {name:'Reaktiosuunnat',area:'Reaktio',desc:'Kaveri näyttää suunnan – reagoi nopeasti.',min:5,level:2},
+  {name:'Tasapaino',area:'Kehonhallinta',desc:'Yhden jalan tasapaino ja hallitut kyykyt.',min:6,level:1},
+  {name:'Torjunta-asento',area:'Torjuntatekniikka',desc:'Asento, sivuttaisliike ja palautuminen.',min:8,level:1},
+  {name:'Maalivahdin reaktiopallo',area:'Reaktiot',desc:'Reagoi eri suunnista tuleviin palloihin.',min:7,level:1},
+  {name:'Mailatekniikka',area:'Mailapelaaminen',desc:'Kiekon pysäytys, syöttö ja avaaminen.',min:8,level:1}
+ ],
+ rewards:[
+  {name:'Valitse viikonlopun elokuva',cost:30,icon:'🎬'},
+  {name:'Lempiruoka',cost:50,icon:'🍕'},
+  {name:'Pelivalinta illaksi',cost:80,icon:'🎮'},
+  {name:'Erikoispalkinto',cost:120,icon:'🏆'}
+ ],
+ points:0,weekDone:0,history:[]
+};
+let page='home', editing=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function areas(){return state.player.type==='Maalivahti'?state.goalieAreas:state.areas}
+function go(p){page=p;render()}
+function esc(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function nav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));let x=document.getElementById('n-'+page);if(x)x.classList.add('on')}
+function render(){
+ nav();let a=document.getElementById('app');
+ if(page==='home')a.innerHTML=home();
+ if(page==='plan')a.innerHTML=plan();
+ if(page==='progress')a.innerHTML=progress();
+ if(page==='reward')a.innerHTML=rewards();
+ if(page==='admin')a.innerHTML=admin();
+}
+function home(){
+ let A=areas().slice().sort((x,y)=>y.weight-x.weight), ex=A.filter(x=>x.weight>0).slice(0,5).map(x=>state.exercises.find(e=>e.area===x.name)).filter(Boolean);
+ return `<div class="card"><div class="row"><div><h2>Hei ${esc(state.player.name)}! 👋</h2><div class="muted">${state.player.age}-vuotias • ${state.player.type} • Taso ${state.player.level}</div></div><span class="pill">${state.player.locked?'🔒 Lukittu':'✏️ Muokattava'}</span></div>
+ <div class="grid" style="margin-top:12px"><div class="stat"><b>${state.weekDone}</b><span class="muted">treeniä</span></div><div class="stat"><b>${state.points}</b><span class="muted">pistettä</span></div><div class="stat"><b>${state.history.length}</b><span class="muted">suoritusta</span></div></div></div>
+ ${state.player.locked?'<div class="lock">🔒 Vanhempi/valmentaja on lukinnut tämän ohjelman. Lapsi voi suorittaa treenejä, mutta ohjelman asetuksia ei voi muuttaa.</div>':''}
+ <div class="card"><div class="row"><h2>Tämän päivän treeni</h2><span class="pill">${ex.reduce((s,e)=>s+e.min,0)} min</span></div>
+ ${ex.map((e,i)=>`<div class="item"><div class="row"><b>${i+1}. ${esc(e.name)}</b><span class="pill">${e.min} min</span></div><div class="muted">${esc(e.desc)}</div></div>`).join('')}
+ <button class="good" onclick="complete()">✓ Treeni tehty +10 pistettä</button></div>`
+}
+function plan(){
+ return `<div class="card"><h2>📅 Viikko-ohjelma</h2>${['MA','TI','KE','TO','PE','LA','SU'].map((d,i)=>`<div class="item"><div class="row"><b>${d}</b><span class="pill">${i<5?'20–35 min':'Kevyt / vapaa'}</span></div><div class="muted">${i<5?(i%2?'Koordinaatio + reaktio':'Tekniikka + luistelu'):'Palautuminen'}</div></div>`).join('')}</div>
+ <div class="card"><h2>Harjoitteet</h2>${state.exercises.map((e,i)=>`<div class="item"><div class="row"><b>${esc(e.name)}</b><span class="pill">${e.min} min</span></div><div class="muted">${esc(e.desc)}</div><div class="muted">${esc(e.area)} • Taso ${e.level}</div></div>`).join('')}</div>`
+}
+function progress(){
+ return `<div class="card"><h2>📈 Kehitys</h2><div class="grid"><div class="stat"><b>${state.weekDone}</b><span class="muted">viikon treenit</span></div><div class="stat"><b>${state.points}</b><span class="muted">pistettä</span></div></div></div>
+ <div class="card"><h2>Osa-alueiden painotukset</h2>${areas().map(x=>`<div class="item"><div class="row"><b>${esc(x.name)}</b><span class="pill">${x.weight}%</span></div><div style="height:8px;background:#e8edf4;border-radius:8px"><div style="height:8px;width:${x.weight*2}%;background:#1464ff;border-radius:8px"></div></div></div>`).join('')}</div>
+ <div class="card"><h2>Viimeisimmät suoritukset</h2>${state.history.length?state.history.slice(-8).reverse().map(x=>`<div class="item">🏒 ${esc(x)}</div>`).join(''):'<div class="muted">Ei vielä suorituksia.</div>'}</div>`
+}
+function rewards(){
+ return `<div class="card"><div class="row"><h2>🏆 Palkintokauppa</h2><span class="pill">${state.points} pistettä</span></div><div class="muted">Vanhempi päättää palkinnot ja pistemäärät. Pisteitä ei vähennetä automaattisesti ennen vahvistusta.</div>
+ ${state.rewards.map((r,i)=>`<div class="reward"><div><span class="star">${r.icon}</span> <b>${esc(r.name)}</b><div class="muted">${r.cost} pistettä</div></div><button ${state.points<r.cost?'disabled':''} onclick="redeem(${i})">Lunasta</button></div>`).join('')}</div>`
+}
+function admin(){
+ if(editing==='profile')return profileEditor();
+ if(editing==='areas')return areaEditor();
+ if(editing==='ex')return exEditor();
+ if(editing==='rewards')return rewardEditor();
+ return `<div class="card"><h2>⚙️ Vanhemman / valmentajan hallinta</h2><div class="lock">Täällä rakennat lapselle ohjelman. Kun kaikki on valmista, paina <b>Lukitse lapselle</b>.</div>
+ <button onclick="editing='profile';render()">👤 Pelaajan tiedot</button>
+ <button onclick="editing='areas';render()">🎯 Osa-alueet ja painotukset</button>
+ <button onclick="editing='ex';render()">🏒 Harjoitteet</button>
+ <button onclick="editing='rewards';render()">🏆 Palkinnot</button>
+ <button class="${state.player.locked?'good':'danger'}" onclick="toggleLock()">${state.player.locked?'🔓 Avaa muokkaus':'🔒 Lukitse lapselle'}</button>
+ <button class="secondary" onclick="resetAll()">Palauta oletusasetukset</button></div>`
+}
+function back(){editing=null;render()}
+function profileEditor(){
+ return `<div class="card"><h2>👤 Pelaajan tiedot</h2><label>Nimi</label><input id="pn" value="${esc(state.player.name)}"><label>Ikä</label><input id="pa" type="number" value="${state.player.age}">
+ <label>Rooli</label><select id="pt"><option ${state.player.type==='Pelaaja'?'selected':''}>Pelaaja</option><option ${state.player.type==='Maalivahti'?'selected':''}>Maalivahti</option></select>
+ <label>Taitotaso</label><select id="pl">${[1,2,3,4,5].map(n=>`<option ${n===state.player.level?'selected':''}>${n}</option>`).join('')}</select>
+ <button onclick="saveProfile()">Tallenna</button><button class="secondary" onclick="back()">Takaisin</button></div>`
+}
+function areaEditor(){
+ let A=areas();return `<div class="card"><h2>🎯 Osa-alueet</h2><div class="muted">Maalivahdilla ja kenttäpelaajalla on omat osa-alueensa. Muuta prosentit lapselle sopiviksi.</div>
+ ${A.map((x,i)=>`<div class="item"><div class="row"><input style="margin:0;width:55%" value="${esc(x.name)}" onchange="renameArea(${i},this.value)"><span class="pill">${x.weight}%</span></div><input type="range" min="0" max="50" value="${x.weight}" oninput="weightArea(${i},this.value)"></div>`).join('')}
+ <button class="secondary" onclick="back()">Takaisin</button></div>`
+}
+function exEditor(){
+ return `<div class="card"><h2>🏒 Harjoitteet</h2>${state.exercises.map((e,i)=>`<div class="item"><div class="row"><b>${esc(e.name)}</b><button class="danger" onclick="deleteEx(${i})">Poista</button></div><input value="${esc(e.name)}" onchange="editEx(${i},'name',this.value)"><input value="${esc(e.area)}" onchange="editEx(${i},'area',this.value)"><textarea onchange="editEx(${i},'desc',this.value)">${esc(e.desc)}</textarea><label>Kesto (min)</label><input type="number" value="${e.min}" onchange="editEx(${i},'min',this.value)"></div>`).join('')}
+ <button onclick="addEx()">+ Lisää harjoite</button><button class="secondary" onclick="back()">Takaisin</button></div>`
+}
+function rewardEditor(){
+ return `<div class="card"><h2>🏆 Palkinnot</h2>${state.rewards.map((r,i)=>`<div class="item"><input value="${esc(r.icon)}" onchange="state.rewards[${i}].icon=this.value;save()"><input value="${esc(r.name)}" onchange="state.rewards[${i}].name=this.value;save()"><input type="number" value="${r.cost}" onchange="state.rewards[${i}].cost=Number(this.value);save()"><button class="danger" onclick="state.rewards.splice(${i},1);save();render()">Poista</button></div>`).join('')}
+ <button onclick="state.rewards.push({name:'Uusi palkinto',cost:50,icon:'⭐'});save();render()">+ Lisää palkinto</button><button class="secondary" onclick="back()">Takaisin</button></div>`
+}
+function saveProfile(){state.player.name=document.getElementById('pn').value||'Pelaaja';state.player.age=Number(document.getElementById('pa').value)||10;state.player.type=document.getElementById('pt').value;state.player.level=Number(document.getElementById('pl').value);save();back()}
+function renameArea(i,v){areas()[i].name=v;save();render()}
+function weightArea(i,v){areas()[i].weight=Number(v);save();render()}
+function editEx(i,k,v){state.exercises[i][k]=k==='min'?Number(v):v;save()}
+function addEx(){state.exercises.push({name:'Uusi harjoite',area:state.player.type==='Maalivahti'?'Torjuntatekniikka':'Koordinaatio',desc:'Kirjoita harjoitteen ohje.',min:5,level:1});save();render()}
+function deleteEx(i){state.exercises.splice(i,1);save();render()}
+function complete(){state.weekDone=Math.min(7,state.weekDone+1);state.points+=10;state.history.push('Päivän treeni (+10 pistettä)');save();render()}
+function redeem(i){let r=state.rewards[i];if(state.points<r.cost)return;state.points-=r.cost;state.history.push('Palkinto lunastettu: '+r.name);save();alert('Palkinto merkitty lunastetuksi!');render()}
+function toggleLock(){state.player.locked=!state.player.locked;save();render()}
+function resetAll(){if(confirm('Palautetaanko kaikki oletuksiin?')){localStorage.removeItem(KEY);location.reload()}}
+render();
+</script>
+</body>
+</html>
